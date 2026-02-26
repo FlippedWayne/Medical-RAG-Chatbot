@@ -31,11 +31,33 @@ os.environ["LANGCHAIN_TRACING_V2"] = "true"
 # Get API key from environment
 langsmith_api_key = os.getenv("LANGSMITH_API_KEY") or os.getenv("LANGCHAIN_API_KEY")
 if langsmith_api_key:
-    logger.info("✅ LangSmith tracing enabled for evaluations")
+    logger.info("✅ LangSmith API key found")
     logger.info(f"📊 Project: medical-chatbot-evaluators")
+    
+    # Initialize LangSmith client
+    from src.observability.langsmith_config import configure_langsmith
+    success = configure_langsmith(
+        api_key=langsmith_api_key,
+        project_name="medical-chatbot-evaluators",
+        enable_tracing=True
+    )
+    
+    if not success:
+        logger.error("❌ Failed to configure LangSmith")
+        logger.error("💡 Check your API key and try again")
+        logger.error("💡 Get your API key from: https://smith.langchain.com/settings")
+        sys.exit(1)
+    
+    logger.info("✅ LangSmith configured successfully")
 else:
-    logger.warning("⚠️ LangSmith API key not found. Evaluation features may be limited.")
-    logger.warning("💡 Make sure LANGSMITH_API_KEY is set in .env file")
+    logger.error("❌ LangSmith API key not found!")
+    logger.error("💡 Set LANGSMITH_API_KEY in environment or .env file")
+    logger.error("💡 Get your API key from: https://smith.langchain.com/settings")
+    logger.error("")
+    logger.error("Quick fix:")
+    logger.error("  $env:LANGSMITH_API_KEY = 'your_api_key_here'")
+    logger.error("  $env:LANGCHAIN_TRACING_V2 = 'true'")
+    sys.exit(1)
 
 
 # Medical Chatbot Test Examples

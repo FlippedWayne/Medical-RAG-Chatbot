@@ -4,11 +4,12 @@ Test script to verify all fixes are working correctly
 import sys
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+# Add project root to path so imports like `from src.utils...` resolve correctly
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
-from utils.logger import get_logger
-from config.settings import Settings
+from src.utils.logger import get_logger
+from src.config.settings import Settings
 
 print("=" * 60)
 print("🧪 Testing All Fixes")

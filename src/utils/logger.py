@@ -39,9 +39,10 @@ def setup_logger(
     import io
     
     is_streamlit = 'streamlit' in sys.modules
+    is_pytest = 'pytest' in sys.modules
     
-    if is_streamlit:
-        # In Streamlit, use stdout directly (it's already redirected)
+    if is_streamlit or is_pytest:
+        # In Streamlit or pytest, use stdout directly
         utf8_stdout = sys.stdout
     else:
         # In regular Python, try to create UTF-8 wrapper for Windows console

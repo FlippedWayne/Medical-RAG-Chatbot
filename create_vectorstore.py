@@ -14,13 +14,21 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Use centralized logger
+# Use centralized logger and exceptions
 from src.utils.logger import get_logger
+from src.utils.exceptions import VectorStoreError
 
 # Import LangSmith observability
 from langsmith import traceable
 
-# Initialize logger with custom log file
+# Disable verbose logging from LangChain libraries
+import logging
+logging.getLogger("langchain").setLevel(logging.WARNING)
+logging.getLogger("langchain_community").setLevel(logging.WARNING)
+logging.getLogger("langchain_core").setLevel(logging.WARNING)
+logging.getLogger("langsmith").setLevel(logging.WARNING)
+
+# Initialize logger with custom log file (only once)
 logger = get_logger(__name__, log_to_file=True, custom_log_file="vector_creation.log")
 
 # Configure LangSmith for vector store creation tracking
@@ -35,10 +43,43 @@ if langsmith_api_key:
 else:
     logger.warning("⚠️ LangSmith API key not found. Tracing disabled.")
 
+# Load configuration from config.yaml
+import yaml
+
+def load_config():
+    """Load configuration from config.yaml"""
+    config_path = Path("src/config/config.yaml")
+    try:
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        logger.info(f"✅ Configuration loaded from {config_path}")
+        return config
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to load config: {e}. Using defaults.")
+        return {}
+
+# Load config
+config = load_config()
+
+# Get embedding configuration from config.yaml
+embedding_config = config.get('embedding', {})
+
+# Determine which embedding model to use based on strategy
+strategy = embedding_config.get('strategy', 'single')
+if strategy == 'single':
+    # Use the legacy single model or primary model
+    DEFAULT_EMBEDDING_MODEL = embedding_config.get('model') or \
+                             embedding_config.get('primary', {}).get('model', 'sentence-transformers/all-MiniLM-L6-v2')
+else:
+    # For ensemble/hybrid, use primary model for vector store creation
+    DEFAULT_EMBEDDING_MODEL = embedding_config.get('primary', {}).get('model', 'BAAI/bge-base-en-v1.5')
+
+logger.info(f"📝 Using embedding model: {DEFAULT_EMBEDDING_MODEL}")
+logger.info(f"📝 Embedding strategy: {strategy}")
+
 # Constants
 DATA_PATH = "data/"
 DB_FAISS_PATH = "vectorstore/db_faiss"
-DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
@@ -53,9 +94,7 @@ class EmbeddingError(Exception):
     pass
 
 
-class VectorStoreError(Exception):
-    """Custom exception for vector store errors"""
-    pass
+# VectorStoreError is imported from src.utils.exceptions
 
 
 def validate_data_directory(data_path: str) -> None:

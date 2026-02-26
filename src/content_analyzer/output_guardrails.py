@@ -12,6 +12,18 @@ from .config import ValidationIssue, ValidationSeverity
 from .pii_detector import PIIDetector
 from .toxic_detector import ToxicContentDetector
 
+# LangSmith tracing
+try:
+    from langsmith import traceable
+    LANGSMITH_AVAILABLE = True
+except ImportError:
+    LANGSMITH_AVAILABLE = False
+    # Create a no-op decorator if LangSmith is not available
+    def traceable(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+
 # Optional NER detector (requires spaCy)
 try:
     from .ner_detector import NERDetector
@@ -125,6 +137,14 @@ class OutputGuardrails:
             f"Presidio: {self.enable_presidio_check}"
         )
     
+    @traceable(
+        name="guardrails_validation",
+        metadata={
+            "component": "output_guardrails",
+            "checks": ["pii", "toxic", "hallucination", "medical_disclaimer"]
+        },
+        tags=["security", "guardrails", "validation"]
+    )
     def validate_output(
         self,
         llm_output: str,

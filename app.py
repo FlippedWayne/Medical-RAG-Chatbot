@@ -60,7 +60,7 @@ guardrails = OutputGuardrails(
     enable_toxic_check=True,
     enable_hallucination_check=True,
     require_medical_disclaimer=True,
-    enable_ner_check=True,  # Enable NER-based entity detection
+    enable_ner_check=False,  # Disabled: spaCy model not installed (run: python -m spacy download en_core_web_sm)
     enable_presidio_check=True,  # Enable Presidio ML-based PII detection
     block_on_pii=True,
     block_on_toxic=True
@@ -193,6 +193,7 @@ def initialize_llm(config: dict):
 def get_rag_prompt():
     """
     Create a RAG prompt template for question answering.
+    Loads from src/prompts/medical_assistant.txt for better maintainability.
     
     Returns:
         ChatPromptTemplate: Prompt template for RAG
@@ -201,11 +202,43 @@ def get_rag_prompt():
         LLMError: If prompt creation fails
     """
     try:
-        logger.info("Creating RAG prompt template")
+        logger.info("Loading RAG prompt template from file...")
         
         from langchain_core.prompts import ChatPromptTemplate
+        from pathlib import Path
         
-        template = """You are a helpful medical assistant. Use the following context to answer the user's question.
+        # Load prompt from file
+        prompt_path = Path("src/prompts/medical_assistant.txt")
+        
+        if not prompt_path.exists():
+            logger.warning(f"Prompt file not found: {prompt_path}, using fallback")
+            return create_fallback_prompt()
+        
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            template = f.read()
+        
+        prompt = ChatPromptTemplate.from_template(template)
+        logger.info(f"✅ Successfully loaded prompt from {prompt_path}")
+        logger.info("📋 Prompt includes: 9 medical rules + 5 security rules")
+        return prompt
+        
+    except Exception as e:
+        error_msg = f"Failed to load prompt from file: {str(e)}"
+        logger.error(error_msg)
+        logger.info("Using fallback prompt instead")
+        return create_fallback_prompt()
+
+
+def create_fallback_prompt():
+    """
+    Create a fallback prompt if file loading fails.
+    
+    Returns:
+        ChatPromptTemplate: Basic fallback prompt
+    """
+    from langchain_core.prompts import ChatPromptTemplate
+    
+    template = """You are a helpful medical assistant. Use the following context to answer the user's question.
 If you don't know the answer based on the context, say so - don't make up information.
 
 Context:
@@ -214,14 +247,9 @@ Context:
 Question: {input}
 
 Answer:"""
-        
-        prompt = ChatPromptTemplate.from_template(template)
-        logger.info("Successfully created RAG prompt template")
-        return prompt
-    except Exception as e:
-        error_msg = f"Failed to create RAG prompt: {str(e)}"
-        logger.error(error_msg)
-        raise LLMError(error_msg)
+    
+    logger.info("Using fallback prompt (basic version)")
+    return ChatPromptTemplate.from_template(template)
 
 
 @trace_chain(
@@ -522,11 +550,21 @@ def main():
     # Sidebar with info
     with st.sidebar:
         st.header("ℹ️ About")
-        st.markdown("""
+
+        # Dynamically show active LLM info from settings
+        active_llm_name = "Unknown"
+        active_provider = "Unknown"
+        if settings and settings.config:
+            _active = settings.config.get("active_llm", "groq")
+            _llm_cfg = settings.config.get("llms", {}).get(_active, {})
+            active_llm_name = _active.upper()
+            active_provider = _llm_cfg.get("provider", _active).capitalize()
+
+        st.markdown(f"""
         This chatbot uses:
         - 🧠 RAG (Retrieval-Augmented Generation)
         - 📚 FAISS Vector Database
-        - 🤖 Groq LLM API
+        - 🤖 **{active_llm_name}** ({active_provider} API)
         - 🔍 Semantic Search
         """)
         

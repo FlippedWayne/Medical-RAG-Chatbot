@@ -105,10 +105,14 @@ class PIIDetectorPresidio:
             self.anonymizer = AnonymizerEngine()
             
             # Set entities to detect
+            # NOTE: PERSON is intentionally excluded — spaCy's en_core_web_sm model
+            # frequently misclassifies capitalized medical terms (e.g., "Insulin",
+            # "Pancreas", "Beta cells") as person names, causing false positives
+            # that block legitimate medical answers.
             self.entities = entities or [
-                "PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER",
+                "EMAIL_ADDRESS", "PHONE_NUMBER",
                 "CREDIT_CARD", "US_SSN", "MEDICAL_LICENSE",
-                "DATE_TIME", "LOCATION", "IP_ADDRESS",
+                "IP_ADDRESS",
                 "US_PASSPORT", "US_DRIVER_LICENSE", "US_BANK_NUMBER",
                 "CRYPTO", "IBAN_CODE", "US_ITIN"
             ]
