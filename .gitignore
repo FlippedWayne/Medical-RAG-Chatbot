@@ -83,3 +83,6 @@ tests/giskard/test_data/
 tests/evaluation/results/*.csv
 tests/evaluation/results/*.json
 !tests/evaluation/results/.gitkeep
+
+# Documentation (internal dev notes, not for GitHub)
+docs/
