@@ -1,4 +1,3 @@
-import pytest
 from src.utils.exceptions import (
     MedicalChatbotError,
     ConfigurationError,
@@ -7,8 +6,9 @@ from src.utils.exceptions import (
     IngestionError,
     ValidationError,
     PIIDetectionError,
-    ToxicContentError
+    ToxicContentError,
 )
+
 
 class TestExceptions:
     def test_base_exception(self):
@@ -46,4 +46,3 @@ class TestExceptions:
     def test_toxic_error(self):
         err = ToxicContentError("Toxic content")
         assert isinstance(err, ValidationError)
-

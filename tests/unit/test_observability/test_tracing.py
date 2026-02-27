@@ -1,12 +1,12 @@
 """
 Unit tests for src/observability/tracing.py
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
 
 class TestTraceChainDecorator:
-
     def test_trace_chain_disabled_returns_original(self):
         """Returns original function when tracing is disabled"""
         with patch(
@@ -22,10 +22,12 @@ class TestTraceChainDecorator:
 
     def test_trace_chain_enabled_calls_func(self):
         """Wrapped function executes and returns value when tracing is enabled"""
-        mock_traceable = MagicMock(side_effect=lambda *a, **kw: (lambda f: f))
+        mock_traceable = MagicMock(side_effect=lambda *a, **kw: lambda f: f)
 
-        with patch("src.observability.tracing.is_langsmith_enabled", return_value=True), \
-             patch("src.observability.tracing.traceable", mock_traceable):
+        with (
+            patch("src.observability.tracing.is_langsmith_enabled", return_value=True),
+            patch("src.observability.tracing.traceable", mock_traceable),
+        ):
             from src.observability.tracing import trace_chain
 
             @trace_chain(name="test_chain")
@@ -52,26 +54,24 @@ class TestTraceChainDecorator:
 
 
 class TestCreateFeedback:
-
     def test_create_feedback_disabled(self):
         """Returns False when LangSmith is disabled"""
         with patch(
             "src.observability.tracing.is_langsmith_enabled", return_value=False
         ):
             from src.observability.tracing import create_feedback
-            result = create_feedback(
-                run_id="run-123", key="rating", score=0.9
-            )
+
+            result = create_feedback(run_id="run-123", key="rating", score=0.9)
         assert result is False
 
     def test_create_feedback_no_client(self):
         """Returns False when client is None"""
-        with patch(
-            "src.observability.tracing.is_langsmith_enabled", return_value=True
-        ), patch(
-            "src.observability.tracing.get_langsmith_client", return_value=None
+        with (
+            patch("src.observability.tracing.is_langsmith_enabled", return_value=True),
+            patch("src.observability.tracing.get_langsmith_client", return_value=None),
         ):
             from src.observability.tracing import create_feedback
+
             result = create_feedback(run_id="run-123", key="rating", score=0.9)
         assert result is False
 
@@ -79,13 +79,15 @@ class TestCreateFeedback:
         """Calls client.create_feedback and returns True"""
         mock_client = MagicMock()
 
-        with patch(
-            "src.observability.tracing.is_langsmith_enabled", return_value=True
-        ), patch(
-            "src.observability.tracing.get_langsmith_client",
-            return_value=mock_client,
+        with (
+            patch("src.observability.tracing.is_langsmith_enabled", return_value=True),
+            patch(
+                "src.observability.tracing.get_langsmith_client",
+                return_value=mock_client,
+            ),
         ):
             from src.observability.tracing import create_feedback
+
             result = create_feedback(
                 run_id="run-123",
                 key="user_rating",
@@ -108,26 +110,26 @@ class TestCreateFeedback:
         mock_client = MagicMock()
         mock_client.create_feedback.side_effect = Exception("Network error")
 
-        with patch(
-            "src.observability.tracing.is_langsmith_enabled", return_value=True
-        ), patch(
-            "src.observability.tracing.get_langsmith_client",
-            return_value=mock_client,
+        with (
+            patch("src.observability.tracing.is_langsmith_enabled", return_value=True),
+            patch(
+                "src.observability.tracing.get_langsmith_client",
+                return_value=mock_client,
+            ),
         ):
             from src.observability.tracing import create_feedback
+
             result = create_feedback(run_id="run-123", key="rating", score=0.5)
 
         assert result is False
 
 
 class TestGetCurrentRunId:
-
     def test_get_current_run_id_no_run(self):
         """Returns None when no active run tree"""
-        with patch(
-            "src.observability.tracing.get_current_run_tree", return_value=None
-        ):
+        with patch("src.observability.tracing.get_current_run_tree", return_value=None):
             from src.observability.tracing import get_current_run_id
+
             assert get_current_run_id() is None
 
     def test_get_current_run_id_active(self):
@@ -140,19 +142,18 @@ class TestGetCurrentRunId:
             return_value=mock_run,
         ):
             from src.observability.tracing import get_current_run_id
+
             result = get_current_run_id()
 
         assert result == "abc-def-123"
 
 
 class TestAddRunMetadata:
-
     def test_add_run_metadata_no_run(self):
         """Returns False when no active run tree"""
-        with patch(
-            "src.observability.tracing.get_current_run_tree", return_value=None
-        ):
+        with patch("src.observability.tracing.get_current_run_tree", return_value=None):
             from src.observability.tracing import add_run_metadata
+
             result = add_run_metadata({"key": "value"})
         assert result is False
 
@@ -166,6 +167,7 @@ class TestAddRunMetadata:
             return_value=mock_run,
         ):
             from src.observability.tracing import add_run_metadata
+
             result = add_run_metadata({"version": "1.0"})
 
         assert result is True
@@ -173,13 +175,11 @@ class TestAddRunMetadata:
 
 
 class TestAddRunTags:
-
     def test_add_run_tags_no_run(self):
         """Returns False when no active run tree"""
-        with patch(
-            "src.observability.tracing.get_current_run_tree", return_value=None
-        ):
+        with patch("src.observability.tracing.get_current_run_tree", return_value=None):
             from src.observability.tracing import add_run_tags
+
             result = add_run_tags(["rag", "medical"])
         assert result is False
 
@@ -193,6 +193,7 @@ class TestAddRunTags:
             return_value=mock_run,
         ):
             from src.observability.tracing import add_run_tags
+
             result = add_run_tags(["rag", "medical"])
 
         assert result is True

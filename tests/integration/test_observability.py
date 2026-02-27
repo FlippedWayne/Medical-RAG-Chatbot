@@ -20,9 +20,10 @@ try:
         is_langsmith_enabled,
         trace_chain,
         create_feedback,
-        get_current_run_id
+        get_current_run_id,
     )
     from src.observability.tracing import add_run_metadata
+
     print("   ✅ All observability imports successful\n")
 except ImportError as e:
     print(f"   ❌ Import error: {e}\n")
@@ -44,10 +45,11 @@ except Exception as e:
 # Test 3: Test trace decorator
 print("3. Testing trace decorator...")
 try:
+
     @trace_chain(name="test_function", tags=["test"])
     def test_function(x):
         return x * 2
-    
+
     result = test_function(5)
     assert result == 10
     print("   ✅ Trace decorator works correctly\n")
@@ -60,6 +62,7 @@ try:
     from src.utils.logger import get_logger
     from src.utils.exceptions import VectorStoreError, LLMError
     from src.config.settings import settings
+
     print("   ✅ All main app imports successful\n")
 except ImportError as e:
     print(f"   ❌ Import error: {e}\n")

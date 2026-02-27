@@ -1,13 +1,12 @@
 """
 Unit tests for src/content_analyzer/pii_detector.py
 """
-import pytest
+
 from src.content_analyzer.pii_detector import PIIDetector
 from src.content_analyzer.config import ValidationSeverity
 
 
 class TestPIIDetectorInit:
-
     def test_init_default_patterns(self):
         """Loads all default PII_PATTERNS on init"""
         detector = PIIDetector()
@@ -29,7 +28,6 @@ class TestPIIDetectorInit:
 
 
 class TestPIIDetectorDetect:
-
     def test_detect_email(self):
         """Detects email address"""
         detector = PIIDetector()
@@ -83,7 +81,6 @@ class TestPIIDetectorDetect:
 
 
 class TestPIIDetectorHelpers:
-
     def test_has_pii_true(self, pii_text):
         """has_pii returns True when PII present"""
         detector = PIIDetector()

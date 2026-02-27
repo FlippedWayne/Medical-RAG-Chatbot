@@ -19,7 +19,7 @@ try:
     )
     from .security_tests import GiskardSecurityTester
     from .rag_evaluation import RAGEvaluator
-    
+
     __all__ = [
         "GISKARD_CONFIG",
         "TEST_CATEGORIES",
@@ -34,7 +34,7 @@ try:
 except ImportError as e:
     print(f"⚠️ Some imports failed: {e}")
     print("⚠️ Make sure all dependencies are installed")
-    
+
     __all__ = [
         "GISKARD_CONFIG",
         "TEST_CATEGORIES",

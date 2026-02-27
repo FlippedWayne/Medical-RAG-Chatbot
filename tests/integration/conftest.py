@@ -4,9 +4,10 @@ Shared fixtures for integration tests.
 All external dependencies (LLM APIs, FAISS disk I/O) are mocked so that
 integration tests run offline without real API keys or a built vector store.
 """
+
 import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from langchain_core.documents import Document
 
@@ -14,6 +15,7 @@ from langchain_core.documents import Document
 # ---------------------------------------------------------------------------
 # Path fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def project_root() -> Path:
@@ -24,6 +26,7 @@ def project_root() -> Path:
 # ---------------------------------------------------------------------------
 # Config fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def sample_config() -> dict:
@@ -68,6 +71,7 @@ def sample_config() -> dict:
 # LLM fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_llm():
     """
@@ -101,6 +105,7 @@ def mock_llm_pii_response():
 # ---------------------------------------------------------------------------
 # Vector store fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def fake_documents():
@@ -140,6 +145,7 @@ def mock_vectorstore(fake_documents):
 # ---------------------------------------------------------------------------
 # Content Analyzer fixture
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def content_validator():

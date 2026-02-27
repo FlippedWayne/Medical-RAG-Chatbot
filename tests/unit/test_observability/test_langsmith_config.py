@@ -1,13 +1,12 @@
 """
 Unit tests for src/observability/langsmith_config.py
 """
+
 import os
-import pytest
 from unittest.mock import patch, MagicMock
 
 
 class TestConfigureLangsmith:
-
     def test_configure_langsmith_no_key(self, monkeypatch):
         """Returns False when no API key is present"""
         monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
@@ -15,6 +14,7 @@ class TestConfigureLangsmith:
         # Reload to reset module global
         import importlib
         import src.observability.langsmith_config as cfg_mod
+
         importlib.reload(cfg_mod)
 
         result = cfg_mod.configure_langsmith(api_key=None)
@@ -24,9 +24,12 @@ class TestConfigureLangsmith:
         """Returns True, sets env vars, creates Client"""
         mock_client = MagicMock()
 
-        with patch("src.observability.langsmith_config.Client", return_value=mock_client):
+        with patch(
+            "src.observability.langsmith_config.Client", return_value=mock_client
+        ):
             import importlib
             import src.observability.langsmith_config as cfg_mod
+
             importlib.reload(cfg_mod)
 
             result = cfg_mod.configure_langsmith(
@@ -44,6 +47,7 @@ class TestConfigureLangsmith:
         with patch("src.observability.langsmith_config.Client", MagicMock()):
             import importlib
             import src.observability.langsmith_config as cfg_mod
+
             importlib.reload(cfg_mod)
 
             cfg_mod.configure_langsmith(
@@ -61,6 +65,7 @@ class TestConfigureLangsmith:
         ):
             import importlib
             import src.observability.langsmith_config as cfg_mod
+
             importlib.reload(cfg_mod)
 
             result = cfg_mod.configure_langsmith(api_key="test-key")
@@ -69,7 +74,6 @@ class TestConfigureLangsmith:
 
 
 class TestIsLangsmithEnabled:
-
     def test_is_langsmith_enabled_true(self, monkeypatch):
         """Returns True when tracing env vars are set"""
         monkeypatch.setenv("LANGCHAIN_TRACING_V2", "true")
@@ -77,6 +81,7 @@ class TestIsLangsmithEnabled:
 
         import importlib
         import src.observability.langsmith_config as cfg_mod
+
         importlib.reload(cfg_mod)
 
         assert cfg_mod.is_langsmith_enabled() is True
@@ -88,27 +93,28 @@ class TestIsLangsmithEnabled:
 
         import importlib
         import src.observability.langsmith_config as cfg_mod
+
         importlib.reload(cfg_mod)
 
         assert cfg_mod.is_langsmith_enabled() is False
 
 
 class TestGetLangsmithClient:
-
     def test_get_langsmith_client_none(self):
         """Returns None when not configured"""
         import importlib
         import src.observability.langsmith_config as cfg_mod
+
         importlib.reload(cfg_mod)
         # _langsmith_client starts as None after reload
         assert cfg_mod.get_langsmith_client() is None
 
 
 class TestTracingToggle:
-
     def test_disable_tracing(self):
         """disable_tracing sets LANGCHAIN_TRACING_V2=false"""
         from src.observability.langsmith_config import disable_tracing
+
         disable_tracing()
         assert os.environ.get("LANGCHAIN_TRACING_V2") == "false"
 
@@ -116,6 +122,7 @@ class TestTracingToggle:
         """enable_tracing sets LANGCHAIN_TRACING_V2=true when API key present"""
         monkeypatch.setenv("LANGCHAIN_API_KEY", "test-key")
         from src.observability.langsmith_config import enable_tracing
+
         enable_tracing()
         assert os.environ.get("LANGCHAIN_TRACING_V2") == "true"
 
@@ -124,12 +131,12 @@ class TestTracingToggle:
         monkeypatch.delenv("LANGCHAIN_API_KEY", raising=False)
         monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
         from src.observability.langsmith_config import enable_tracing
+
         enable_tracing()
         assert os.environ.get("LANGCHAIN_TRACING_V2") == "false"
 
 
 class TestGetTraceUrl:
-
     def test_get_trace_url_enabled(self, monkeypatch):
         """Returns formatted URL when LangSmith is enabled"""
         monkeypatch.setenv("LANGCHAIN_TRACING_V2", "true")
@@ -138,6 +145,7 @@ class TestGetTraceUrl:
 
         import importlib
         import src.observability.langsmith_config as cfg_mod
+
         importlib.reload(cfg_mod)
 
         url = cfg_mod.get_trace_url("run-abc-123")
@@ -152,6 +160,7 @@ class TestGetTraceUrl:
 
         import importlib
         import src.observability.langsmith_config as cfg_mod
+
         importlib.reload(cfg_mod)
 
         assert cfg_mod.get_trace_url("run-abc-123") is None

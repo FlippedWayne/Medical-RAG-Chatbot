@@ -6,6 +6,7 @@ get_evaluation_llm() correctly integrate with the Settings module.
 
 All actual LLM provider constructors are patched so no real API calls are made.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -16,26 +17,31 @@ class TestLoadConfigIntegration:
 
     def test_load_config_returns_dict(self):
         from src.model.llm_factory import load_config
+
         config = load_config()
         assert isinstance(config, dict)
 
     def test_load_config_has_llms_key(self):
         from src.model.llm_factory import load_config
+
         config = load_config()
         assert "llms" in config
 
     def test_load_config_has_embedding_key(self):
         from src.model.llm_factory import load_config
+
         config = load_config()
         assert "embedding" in config
 
     def test_load_config_has_vectorstore_key(self):
         from src.model.llm_factory import load_config
+
         config = load_config()
         assert "vectorstore" in config
 
     def test_load_config_active_llm_present(self):
         from src.model.llm_factory import load_config
+
         config = load_config()
         active = config.get("active_llm")
         assert active is not None
@@ -55,6 +61,7 @@ class TestCreateLLMIntegration:
         with patch("src.model.llm_factory.load_config", return_value=sample_config):
             with patch("langchain_groq.ChatGroq", return_value=mock_groq_instance):
                 from src.model.llm_factory import create_llm
+
                 llm = create_llm("groq", sample_config)
 
         assert llm is not None
@@ -62,10 +69,12 @@ class TestCreateLLMIntegration:
     def test_create_llm_missing_api_key_raises(self, monkeypatch, sample_config):
         """ConfigurationError raised when the required API key env var is absent."""
         from src.utils.exceptions import ConfigurationError
+
         monkeypatch.delenv("GROQ_API_KEY", raising=False)
 
         with pytest.raises(ConfigurationError, match="GROQ_API_KEY"):
             from src.model.llm_factory import create_llm
+
             create_llm("groq", sample_config)
 
     def test_create_llm_unknown_name_raises(self, sample_config):
@@ -106,6 +115,7 @@ class TestCreateLLMIntegration:
         with patch("src.model.llm_factory.load_config", return_value=sample_config):
             with patch("langchain_groq.ChatGroq", return_value=mock_groq):
                 from src.model.llm_factory import create_llm
+
                 llm = create_llm(None, sample_config)
 
         assert llm is not None
@@ -122,6 +132,7 @@ class TestGetGenerationLLMIntegration:
         with patch("src.model.llm_factory.load_config", return_value=sample_config):
             with patch("langchain_groq.ChatGroq", return_value=mock_groq):
                 from src.model.llm_factory import get_generation_llm
+
                 llm = get_generation_llm(sample_config)
 
         assert llm is not None
@@ -133,6 +144,7 @@ class TestGetGenerationLLMIntegration:
         with patch("src.model.llm_factory.load_config", return_value=sample_config):
             with patch("langchain_groq.ChatGroq", return_value=mock_groq):
                 from src.model.llm_factory import get_evaluation_llm
+
                 llm = get_evaluation_llm(sample_config)
 
         assert llm is not None

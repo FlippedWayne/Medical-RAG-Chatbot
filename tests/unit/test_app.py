@@ -4,6 +4,7 @@ Tests are focused on pure functions (validate_environment, initialize_llm,
 get_rag_prompt, process_query) that can be exercised without launching Streamlit.
 Streamlit, LangChain, and all heavy dependencies are mocked.
 """
+
 import pytest
 import sys
 from unittest.mock import patch, MagicMock, mock_open
@@ -19,6 +20,7 @@ sys.modules.setdefault("streamlit", streamlit_mock)
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_settings_mock(config_data):
     m = MagicMock()
@@ -48,8 +50,8 @@ def _groq_config():
 # validate_environment
 # ---------------------------------------------------------------------------
 
-class TestValidateEnvironment:
 
+class TestValidateEnvironment:
     def test_validate_environment_success(self, monkeypatch):
         """Returns config dict when settings are valid and API key present"""
         monkeypatch.setenv("GROQ_API_KEY", "test-key")
@@ -58,6 +60,7 @@ class TestValidateEnvironment:
 
         with patch("app.settings", mock_settings):
             from app import validate_environment
+
             result = validate_environment()
 
         assert result["active_llm"] == "groq"
@@ -68,9 +71,10 @@ class TestValidateEnvironment:
         with patch("app.settings", None):
             from app import validate_environment
             from src.utils.exceptions import ConfigurationError
+
             with pytest.raises(ConfigurationError):
                 validate_environment()
-    
+
     def test_validate_environment_no_config(self):
         """Raises ConfigurationError when settings.config is None"""
         mock_settings = MagicMock()
@@ -78,6 +82,7 @@ class TestValidateEnvironment:
         with patch("app.settings", mock_settings):
             from app import validate_environment
             from src.utils.exceptions import ConfigurationError
+
             with pytest.raises(ConfigurationError):
                 validate_environment()
 
@@ -90,6 +95,7 @@ class TestValidateEnvironment:
         with patch("app.settings", mock_settings):
             from app import validate_environment
             from src.utils.exceptions import ConfigurationError
+
             with pytest.raises(ConfigurationError):
                 validate_environment()
 
@@ -105,6 +111,7 @@ class TestValidateEnvironment:
         with patch("app.settings", mock_settings):
             from app import validate_environment
             from src.utils.exceptions import ConfigurationError
+
             with pytest.raises(ConfigurationError):
                 validate_environment()
 
@@ -113,8 +120,8 @@ class TestValidateEnvironment:
 # initialize_llm
 # ---------------------------------------------------------------------------
 
-class TestInitializeLlm:
 
+class TestInitializeLlm:
     def test_initialize_llm_success(self):
         """Calls create_llm and returns the mock LLM"""
         mock_llm_instance = MagicMock()
@@ -126,6 +133,7 @@ class TestInitializeLlm:
 
         with patch("app.create_llm", return_value=mock_llm_instance) as mock_create:
             from app import initialize_llm
+
             result = initialize_llm(config)
 
         assert result is mock_llm_instance
@@ -142,6 +150,7 @@ class TestInitializeLlm:
         with patch("app.create_llm", side_effect=Exception("API error")):
             from app import initialize_llm
             from src.utils.exceptions import LLMError
+
             with pytest.raises(LLMError, match="Failed to initialize LLM"):
                 initialize_llm(config)
 
@@ -150,8 +159,8 @@ class TestInitializeLlm:
 # get_rag_prompt / create_fallback_prompt
 # ---------------------------------------------------------------------------
 
-class TestGetRagPrompt:
 
+class TestGetRagPrompt:
     def test_get_rag_prompt_from_file(self, tmp_path):
         """Loads prompt from file when file exists"""
         prompt_file = tmp_path / "medical_assistant.txt"
@@ -172,6 +181,7 @@ class TestGetRagPrompt:
                 ),
             ):
                 from app import get_rag_prompt
+
                 prompt = get_rag_prompt()
 
         assert prompt is not None
@@ -184,6 +194,7 @@ class TestGetRagPrompt:
             mock_path_cls.return_value = mock_path_instance
 
             from app import get_rag_prompt
+
             prompt = get_rag_prompt()
 
         assert prompt is not None
@@ -191,6 +202,7 @@ class TestGetRagPrompt:
     def test_create_fallback_prompt_returns_template(self):
         """create_fallback_prompt returns a usable ChatPromptTemplate"""
         from app import create_fallback_prompt
+
         prompt = create_fallback_prompt()
         assert prompt is not None
         # The fallback template must have {context} and {input} variables
@@ -202,8 +214,8 @@ class TestGetRagPrompt:
 # process_query
 # ---------------------------------------------------------------------------
 
-class TestProcessQuery:
 
+class TestProcessQuery:
     def _mock_vectorstore(self):
         vs = MagicMock()
         retriever = MagicMock()
@@ -233,12 +245,17 @@ class TestProcessQuery:
         prompt = self._mock_prompt()
         mock_guardrails = MagicMock()
         mock_guardrails.validate_output.return_value = (
-            True, [], "This is a safe medical answer."
+            True,
+            [],
+            "This is a safe medical answer.",
         )
 
-        with patch("app.guardrails", mock_guardrails), \
-             patch("app.is_langsmith_enabled", return_value=False):
+        with (
+            patch("app.guardrails", mock_guardrails),
+            patch("app.is_langsmith_enabled", return_value=False),
+        ):
             from app import process_query
+
             result = process_query("What is diabetes?", vs, llm, prompt)
 
         assert "safe medical answer" in result
@@ -252,6 +269,7 @@ class TestProcessQuery:
         with patch("app.is_langsmith_enabled", return_value=False):
             from app import process_query
             from src.utils.exceptions import LLMError
+
             with pytest.raises((LLMError, ValueError)):
                 process_query("   ", vs, llm, prompt)
 
@@ -276,9 +294,12 @@ class TestProcessQuery:
             "I apologize, but the response contained sensitive information."
         )
 
-        with patch("app.guardrails", mock_guardrails), \
-             patch("app.is_langsmith_enabled", return_value=False):
+        with (
+            patch("app.guardrails", mock_guardrails),
+            patch("app.is_langsmith_enabled", return_value=False),
+        ):
             from app import process_query
+
             result = process_query("Tell me about SSN 123-45-6789", vs, llm, prompt)
 
         assert "sensitive information" in result or "apologize" in result
@@ -288,8 +309,8 @@ class TestProcessQuery:
 # get_vectorstore
 # ---------------------------------------------------------------------------
 
-class TestGetVectorstore:
 
+class TestGetVectorstore:
     def test_get_vectorstore_path_not_found(self, tmp_path):
         """Raises VectorStoreError when vectorstore path does not exist"""
         non_existent_path = str(tmp_path / "missing_db")
@@ -297,5 +318,6 @@ class TestGetVectorstore:
         with patch("app.DB_FAISS_PATH", non_existent_path):
             from app import get_vectorstore
             from src.utils.exceptions import VectorStoreError
+
             with pytest.raises(VectorStoreError):
                 get_vectorstore()

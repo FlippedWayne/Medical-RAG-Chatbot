@@ -4,8 +4,8 @@ Integration tests: Settings + config.yaml
 Verifies that the Settings class correctly loads and parses the real
 src/config/config.yaml file and exposes the expected properties.
 """
+
 import pytest
-from pathlib import Path
 
 
 @pytest.mark.integration

@@ -5,6 +5,7 @@ Verifies that individual detector components interact correctly when wired
 together through the ContentValidator orchestrator.
 All tests use the regex/wordlist-based detectors (no ML dependencies required).
 """
+
 import pytest
 
 
@@ -15,6 +16,7 @@ class TestPIIDetectorIntegration:
     @pytest.fixture(autouse=True)
     def setup(self):
         from src.content_analyzer.pii_detector import PIIDetector
+
         self.detector = PIIDetector()
 
     def test_clean_text_returns_no_issues(self):
@@ -72,6 +74,7 @@ class TestToxicDetectorIntegration:
     @pytest.fixture(autouse=True)
     def setup(self):
         from src.content_analyzer.toxic_detector import ToxicContentDetector
+
         self.detector = ToxicContentDetector()
 
     def test_clean_medical_text_has_no_toxic_issues(self):
@@ -119,17 +122,13 @@ class TestContentValidatorIntegration:
 
     def test_critical_pii_ssn_blocks_content(self, content_validator):
         """SSN is CRITICAL PII — validator must return is_safe=False."""
-        is_safe, issues = content_validator.validate(
-            "SSN: 123-45-6789"
-        )
+        is_safe, issues = content_validator.validate("SSN: 123-45-6789")
         assert is_safe is False
         types = [i.issue_type for i in issues]
         assert any("SSN" in t for t in types)
 
     def test_multiple_pii_types_all_detected(self, content_validator):
-        text = (
-            "Patient: john.doe@email.com, phone: 555-123-4567, SSN: 123-45-6789"
-        )
+        text = "Patient: john.doe@email.com, phone: 555-123-4567, SSN: 123-45-6789"
         _, issues = content_validator.validate(text)
         types = {i.issue_type for i in issues}
         # Expect at least 2 distinct PII types
@@ -139,9 +138,7 @@ class TestContentValidatorIntegration:
     # --- Toxic integration ---
 
     def test_toxic_text_flagged(self, content_validator):
-        is_safe, issues = content_validator.validate(
-            "You are a stupid idiot!"
-        )
+        is_safe, issues = content_validator.validate("You are a stupid idiot!")
         types = [i.issue_type for i in issues]
         assert any(t.startswith("TOXIC_") for t in types)
 
@@ -178,9 +175,7 @@ class TestContentValidatorIntegration:
     # --- validation summary ---
 
     def test_validation_summary_structure(self, content_validator):
-        _, issues = content_validator.validate(
-            "Email: a@b.com and SSN: 123-45-6789"
-        )
+        _, issues = content_validator.validate("Email: a@b.com and SSN: 123-45-6789")
         summary = content_validator.get_validation_summary(issues)
         assert "total_issues" in summary
         assert "pii_count" in summary
@@ -189,9 +184,7 @@ class TestContentValidatorIntegration:
         assert "by_type" in summary
 
     def test_validation_summary_counts_correct(self, content_validator):
-        _, issues = content_validator.validate(
-            "SSN: 123-45-6789"
-        )
+        _, issues = content_validator.validate("SSN: 123-45-6789")
         summary = content_validator.get_validation_summary(issues)
         assert summary["pii_count"] >= 1
         assert summary["toxic_count"] == 0

@@ -3,8 +3,6 @@ Giskard Configuration for Medical RAG Chatbot
 Defines test settings and model wrappers
 """
 
-import os
-from typing import Dict, Any, List
 from pathlib import Path
 
 # Giskard Configuration

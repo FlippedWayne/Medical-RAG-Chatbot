@@ -1,13 +1,12 @@
 """
 Unit tests for src/content_analyzer/toxic_detector.py
 """
-import pytest
+
 from src.content_analyzer.toxic_detector import ToxicContentDetector
 from src.content_analyzer.config import ValidationSeverity
 
 
 class TestToxicContentDetectorInit:
-
     def test_init_default_categories(self):
         """Loads all default TOXIC_CATEGORIES on init"""
         detector = ToxicContentDetector()
@@ -30,7 +29,6 @@ class TestToxicContentDetectorInit:
 
 
 class TestToxicContentDetectorDetect:
-
     def test_detect_profanity(self):
         """Detects profanity word"""
         detector = ToxicContentDetector()
@@ -65,7 +63,6 @@ class TestToxicContentDetectorDetect:
 
 
 class TestToxicContentDetectorHelpers:
-
     def test_has_toxic_content_true(self, toxic_text):
         """has_toxic_content returns True for toxic text"""
         detector = ToxicContentDetector()

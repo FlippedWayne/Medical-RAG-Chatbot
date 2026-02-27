@@ -1,12 +1,11 @@
 import pytest
-import os
-from pathlib import Path
 from unittest.mock import MagicMock
 
 
 # ---------------------------------------------------------------------------
 # Environment fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_env_vars(monkeypatch):
@@ -21,6 +20,7 @@ def mock_env_vars(monkeypatch):
 # Config fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def sample_config_data():
     """Minimal configuration data dictionary (for settings tests)"""
@@ -29,15 +29,13 @@ def sample_config_data():
         "embedding": {
             "strategy": "single",
             "model": "BAAI/bge-base-en-v1.5",
-            "primary": {
-                "model": "BAAI/bge-base-en-v1.5"
-            }
+            "primary": {"model": "BAAI/bge-base-en-v1.5"},
         },
         "vectorstore": {
             "path": "vectorstore/db_faiss",
             "chunk_size": 500,
-            "chunk_overlap": 50
-        }
+            "chunk_overlap": 50,
+        },
     }
 
 
@@ -114,6 +112,7 @@ def full_config_data():
 # LLM fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_llm():
     """A simple MagicMock that pretends to be an LLM"""
@@ -127,6 +126,7 @@ def mock_llm():
 # ---------------------------------------------------------------------------
 # Content text fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def clean_text():

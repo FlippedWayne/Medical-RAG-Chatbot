@@ -1,6 +1,7 @@
 """
 Test script to verify all fixes are working correctly
 """
+
 import sys
 from pathlib import Path
 
@@ -40,7 +41,7 @@ print("Test 3: Config Validation")
 print("-" * 40)
 try:
     settings = Settings()
-    print(f"Config loaded successfully")
+    print("Config loaded successfully")
     print(f"Config keys: {list(settings.config.keys())}")
     print("✅ Test 3 PASSED - No false warnings!")
 except Exception as e:

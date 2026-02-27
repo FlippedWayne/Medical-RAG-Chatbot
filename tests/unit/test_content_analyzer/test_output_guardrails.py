@@ -1,8 +1,6 @@
 """
 Unit tests for src/content_analyzer/output_guardrails.py
 """
-import pytest
-from unittest.mock import patch, MagicMock
 
 from src.content_analyzer.output_guardrails import OutputGuardrails
 from src.content_analyzer.config import ValidationIssue, ValidationSeverity
@@ -11,6 +9,7 @@ from src.content_analyzer.config import ValidationIssue, ValidationSeverity
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_pii_issue():
     return ValidationIssue(
@@ -36,8 +35,8 @@ def _make_toxic_issue():
 # Init
 # ---------------------------------------------------------------------------
 
-class TestOutputGuardrailsInit:
 
+class TestOutputGuardrailsInit:
     def test_init_basic(self):
         """Creates pii_detector and toxic_detector; NER/Presidio disabled"""
         g = OutputGuardrails(enable_ner_check=False, enable_presidio_check=False)
@@ -48,8 +47,9 @@ class TestOutputGuardrailsInit:
 
     def test_init_pii_check_disabled(self):
         """enable_pii_check flag stored correctly"""
-        g = OutputGuardrails(enable_pii_check=False, enable_ner_check=False,
-                             enable_presidio_check=False)
+        g = OutputGuardrails(
+            enable_pii_check=False, enable_ner_check=False, enable_presidio_check=False
+        )
         assert g.enable_pii_check is False
 
 
@@ -57,8 +57,8 @@ class TestOutputGuardrailsInit:
 # validate_output
 # ---------------------------------------------------------------------------
 
-class TestValidateOutput:
 
+class TestValidateOutput:
     def _guardrails(self, **kwargs):
         defaults = dict(enable_ner_check=False, enable_presidio_check=False)
         defaults.update(kwargs)
@@ -120,8 +120,8 @@ class TestValidateOutput:
 # Fallback & sanitize
 # ---------------------------------------------------------------------------
 
-class TestFallbackAndSanitize:
 
+class TestFallbackAndSanitize:
     def _guardrails(self):
         return OutputGuardrails(enable_ner_check=False, enable_presidio_check=False)
 
@@ -156,8 +156,8 @@ class TestFallbackAndSanitize:
 # Deduplication
 # ---------------------------------------------------------------------------
 
-class TestDeduplication:
 
+class TestDeduplication:
     def test_deduplicate_pii_issues_removes_dupes(self):
         """Removes duplicate issues with same position and matched_text"""
         g = OutputGuardrails(enable_ner_check=False, enable_presidio_check=False)
@@ -169,10 +169,12 @@ class TestDeduplication:
     def test_deduplicate_pii_issues_keeps_different(self):
         """Keeps issues with different positions"""
         g = OutputGuardrails(enable_ner_check=False, enable_presidio_check=False)
-        issue_a = ValidationIssue("PII_SSN", ValidationSeverity.CRITICAL, "desc",
-                                   "12***89", 10)
-        issue_b = ValidationIssue("PII_SSN", ValidationSeverity.CRITICAL, "desc",
-                                   "12***89", 50)
+        issue_a = ValidationIssue(
+            "PII_SSN", ValidationSeverity.CRITICAL, "desc", "12***89", 10
+        )
+        issue_b = ValidationIssue(
+            "PII_SSN", ValidationSeverity.CRITICAL, "desc", "12***89", 50
+        )
         unique = g._deduplicate_pii_issues([issue_a, issue_b])
         assert len(unique) == 2
 

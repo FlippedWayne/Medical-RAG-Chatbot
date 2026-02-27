@@ -6,6 +6,7 @@ Tests the full query flow from app.py using mocked external dependencies:
 
 No real API calls are made: the LLM and FAISS vectorstore are both mocked.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -14,6 +15,7 @@ from unittest.mock import patch, MagicMock
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_guardrails_passthrough():
     """
     Return a MagicMock OutputGuardrails that marks every response as safe
@@ -21,8 +23,8 @@ def _make_guardrails_passthrough():
     """
     guardrails = MagicMock()
     guardrails.validate_output.side_effect = lambda llm_output, **kwargs: (
-        True,   # is_safe
-        [],     # issues
+        True,  # is_safe
+        [],  # issues
         llm_output,  # safe_output
     )
     guardrails.get_fallback_response.return_value = (
@@ -36,6 +38,7 @@ def _make_guardrails_blocking():
     Return a MagicMock OutputGuardrails that blocks every response (PII found).
     """
     from src.content_analyzer.config import ValidationIssue, ValidationSeverity
+
     block_issue = ValidationIssue(
         issue_type="PII_SSN",
         severity=ValidationSeverity.CRITICAL,
@@ -57,6 +60,7 @@ def _make_guardrails_blocking():
 # Tests: validate_environment
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.integration
 class TestValidateEnvironmentIntegration:
     """validate_environment() correctly checks config + API key presence."""
@@ -69,8 +73,8 @@ class TestValidateEnvironmentIntegration:
         mock_settings.config = sample_config
 
         with patch("app.settings", mock_settings):
-            import importlib
             import app as app_module
+
             result = app_module.validate_environment()
 
         assert isinstance(result, dict)
@@ -89,6 +93,7 @@ class TestValidateEnvironmentIntegration:
 
         with patch("app.settings", mock_settings):
             import app as app_module
+
             with pytest.raises((ConfigurationError, SystemExit, Exception)):
                 app_module.validate_environment()
 
@@ -98,6 +103,7 @@ class TestValidateEnvironmentIntegration:
 
         with patch("app.settings", None):
             import app as app_module
+
             with pytest.raises(ConfigurationError):
                 app_module.validate_environment()
 
@@ -106,18 +112,21 @@ class TestValidateEnvironmentIntegration:
 # Tests: get_rag_prompt
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.integration
 class TestGetRagPromptIntegration:
     """get_rag_prompt() returns a usable prompt template."""
 
     def test_prompt_is_not_none(self):
         import app as app_module
+
         prompt = app_module.get_rag_prompt()
         assert prompt is not None
 
     def test_prompt_has_context_variable(self):
         """Prompt template must expose a {context} input variable."""
         import app as app_module
+
         prompt = app_module.get_rag_prompt()
         # ChatPromptTemplate exposes input_variables
         variables = prompt.input_variables
@@ -128,6 +137,7 @@ class TestGetRagPromptIntegration:
     def test_prompt_has_input_variable(self):
         """Prompt template must expose an {input} input variable."""
         import app as app_module
+
         prompt = app_module.get_rag_prompt()
         variables = prompt.input_variables
         assert "input" in variables, (
@@ -155,10 +165,10 @@ class TestGetRagPromptIntegration:
         assert prompt is not None
 
 
-
 # ---------------------------------------------------------------------------
 # Tests: process_query
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.integration
 class TestProcessQueryIntegration:
@@ -166,11 +176,10 @@ class TestProcessQueryIntegration:
 
     def _get_prompt(self):
         import app as app_module
+
         return app_module.get_rag_prompt()
 
-    def test_process_query_returns_string(
-        self, mock_llm, mock_vectorstore
-    ):
+    def test_process_query_returns_string(self, mock_llm, mock_vectorstore):
         """A well-formed query returns a non-empty answer string."""
         import app as app_module
 
@@ -209,9 +218,7 @@ class TestProcessQueryIntegration:
 
         mock_vectorstore.as_retriever.assert_called_once()
 
-    def test_process_query_calls_llm_invoke(
-        self, mock_llm, mock_vectorstore
-    ):
+    def test_process_query_calls_llm_invoke(self, mock_llm, mock_vectorstore):
         """LLM.invoke() is called exactly once per query."""
         import app as app_module
 
@@ -229,9 +236,7 @@ class TestProcessQueryIntegration:
 
         mock_llm.invoke.assert_called_once()
 
-    def test_process_query_empty_query_raises(
-        self, mock_llm, mock_vectorstore
-    ):
+    def test_process_query_empty_query_raises(self, mock_llm, mock_vectorstore):
         """Empty query raises LLMError."""
         from src.utils.exceptions import LLMError
         import app as app_module
@@ -249,9 +254,7 @@ class TestProcessQueryIntegration:
                         prompt,
                     )
 
-    def test_process_query_whitespace_only_raises(
-        self, mock_llm, mock_vectorstore
-    ):
+    def test_process_query_whitespace_only_raises(self, mock_llm, mock_vectorstore):
         """Whitespace-only query raises LLMError."""
         from src.utils.exceptions import LLMError
         import app as app_module
