@@ -46,11 +46,11 @@ except Exception as e:
 print("3. Testing trace decorator...")
 try:
 
-    @trace_chain(name="test_function", tags=["test"])
-    def test_function(x):
+    @trace_chain(name="traced_function", tags=["test"])
+    def traced_function(x):
         return x * 2
 
-    result = test_function(5)
+    result = traced_function(5)
     assert result == 10
     print("   ✅ Trace decorator works correctly\n")
 except Exception as e:
