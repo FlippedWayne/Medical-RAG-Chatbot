@@ -1,5 +1,7 @@
 # 🏥 Medical RAG Chatbot
 
+[![CI - Unit Tests](https://github.com/DKMMEHER/Medical-RAG-Chatbot/actions/workflows/ci.yml/badge.svg)](https://github.com/DKMMEHER/Medical-RAG-Chatbot/actions/workflows/ci.yml)
+
 A production-grade **Retrieval-Augmented Generation (RAG)** chatbot for medical Q&A, built with LangChain, FAISS, and Streamlit. Supports 15+ LLM providers and includes content safety guardrails, LangSmith observability, and RAGAS evaluation.
 
 ---

@@ -1,6 +1,7 @@
 """
 Unit tests for src/model/llm_factory.py
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -8,7 +9,6 @@ from src.utils.exceptions import ConfigurationError, LLMError
 
 
 class TestLoadConfig:
-
     def test_load_config_success(self, full_config_data):
         """load_config() returns dict from settings"""
         mock_settings = MagicMock()
@@ -16,6 +16,7 @@ class TestLoadConfig:
 
         with patch("src.model.llm_factory.settings", mock_settings):
             from src.model.llm_factory import load_config
+
             config = load_config()
 
         assert config["active_llm"] == "groq"
@@ -25,6 +26,7 @@ class TestLoadConfig:
         """load_config() raises ConfigurationError when settings is None"""
         with patch("src.model.llm_factory.settings", None):
             from src.model.llm_factory import load_config
+
             with pytest.raises(ConfigurationError):
                 load_config()
 
@@ -35,14 +37,20 @@ class TestLoadConfig:
 
         with patch("src.model.llm_factory.settings", mock_settings):
             from src.model.llm_factory import load_config
+
             with pytest.raises(ConfigurationError):
                 load_config()
 
 
 class TestCreateLLM:
-
-    def _run_create_llm(self, llm_name, full_config_data, env_vars=None,
-                        provider_mock_path=None, mock_env=None):
+    def _run_create_llm(
+        self,
+        llm_name,
+        full_config_data,
+        env_vars=None,
+        provider_mock_path=None,
+        mock_env=None,
+    ):
         """Helper to run create_llm with mocked settings and provider."""
         mock_settings = MagicMock()
         mock_settings.config = full_config_data
@@ -63,24 +71,36 @@ class TestCreateLLM:
                     if len(patches) > 2:
                         with patches[2]:
                             from src.model.llm_factory import create_llm
-                            return create_llm(llm_name=llm_name, config=full_config_data), mock_llm_cls
+
+                            return create_llm(
+                                llm_name=llm_name, config=full_config_data
+                            ), mock_llm_cls
                     else:
                         from src.model.llm_factory import create_llm
-                        return create_llm(llm_name=llm_name, config=full_config_data), mock_llm_cls
+
+                        return create_llm(
+                            llm_name=llm_name, config=full_config_data
+                        ), mock_llm_cls
             else:
                 from src.model.llm_factory import create_llm
-                return create_llm(llm_name=llm_name, config=full_config_data), mock_llm_cls
+
+                return create_llm(
+                    llm_name=llm_name, config=full_config_data
+                ), mock_llm_cls
 
     def test_create_llm_groq(self, full_config_data, monkeypatch):
         """Creates a Groq LLM instance"""
         monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
         mock_chat_groq = MagicMock()
 
-        with patch("src.model.llm_factory.settings") as ms, \
-             patch("langchain_groq.ChatGroq", mock_chat_groq):
+        with (
+            patch("src.model.llm_factory.settings") as ms,
+            patch("langchain_groq.ChatGroq", mock_chat_groq),
+        ):
             ms.config = full_config_data
             from src.model.llm_factory import create_llm
-            result = create_llm(llm_name="groq", config=full_config_data)
+
+            create_llm(llm_name="groq", config=full_config_data)
 
         mock_chat_groq.assert_called_once()
         call_kwargs = mock_chat_groq.call_args.kwargs
@@ -91,10 +111,13 @@ class TestCreateLLM:
         monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
         mock_cls = MagicMock()
 
-        with patch("src.model.llm_factory.settings") as ms, \
-             patch("langchain_openai.ChatOpenAI", mock_cls):
+        with (
+            patch("src.model.llm_factory.settings") as ms,
+            patch("langchain_openai.ChatOpenAI", mock_cls),
+        ):
             ms.config = full_config_data
             from src.model.llm_factory import create_llm
+
             create_llm(llm_name="openai", config=full_config_data)
 
         mock_cls.assert_called_once()
@@ -104,10 +127,13 @@ class TestCreateLLM:
         monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
         mock_cls = MagicMock()
 
-        with patch("src.model.llm_factory.settings") as ms, \
-             patch("langchain_google_genai.ChatGoogleGenerativeAI", mock_cls):
+        with (
+            patch("src.model.llm_factory.settings") as ms,
+            patch("langchain_google_genai.ChatGoogleGenerativeAI", mock_cls),
+        ):
             ms.config = full_config_data
             from src.model.llm_factory import create_llm
+
             create_llm(llm_name="gemini", config=full_config_data)
 
         mock_cls.assert_called_once()
@@ -117,10 +143,13 @@ class TestCreateLLM:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
         mock_cls = MagicMock()
 
-        with patch("src.model.llm_factory.settings") as ms, \
-             patch("langchain_anthropic.ChatAnthropic", mock_cls):
+        with (
+            patch("src.model.llm_factory.settings") as ms,
+            patch("langchain_anthropic.ChatAnthropic", mock_cls),
+        ):
             ms.config = full_config_data
             from src.model.llm_factory import create_llm
+
             create_llm(llm_name="claude", config=full_config_data)
 
         mock_cls.assert_called_once()
@@ -129,10 +158,13 @@ class TestCreateLLM:
         """Creates Ollama LLM without requiring an API key"""
         mock_cls = MagicMock()
 
-        with patch("src.model.llm_factory.settings") as ms, \
-             patch("langchain_community.llms.Ollama", mock_cls):
+        with (
+            patch("src.model.llm_factory.settings") as ms,
+            patch("langchain_community.llms.Ollama", mock_cls),
+        ):
             ms.config = full_config_data
             from src.model.llm_factory import create_llm
+
             create_llm(llm_name="ollama", config=full_config_data)
 
         mock_cls.assert_called_once()
@@ -142,6 +174,7 @@ class TestCreateLLM:
         with patch("src.model.llm_factory.settings") as ms:
             ms.config = full_config_data
             from src.model.llm_factory import create_llm
+
             with pytest.raises((ConfigurationError, LLMError)):
                 create_llm(llm_name="bad_provider", config=full_config_data)
 
@@ -149,10 +182,13 @@ class TestCreateLLM:
         """Raises ConfigurationError when required API key is missing"""
         monkeypatch.delenv("GROQ_API_KEY", raising=False)
 
-        with patch("src.model.llm_factory.settings") as ms, \
-             patch.dict("os.environ", {}, clear=False):
+        with (
+            patch("src.model.llm_factory.settings") as ms,
+            patch.dict("os.environ", {}, clear=False),
+        ):
             ms.config = full_config_data
             from src.model.llm_factory import create_llm
+
             with pytest.raises(ConfigurationError, match="API key not found"):
                 create_llm(llm_name="groq", config=full_config_data)
 
@@ -161,21 +197,24 @@ class TestCreateLLM:
         with patch("src.model.llm_factory.settings") as ms:
             ms.config = full_config_data
             from src.model.llm_factory import create_llm
+
             with pytest.raises(ConfigurationError):
                 create_llm(llm_name="nonexistent_llm", config=full_config_data)
 
 
 class TestHelperFunctions:
-
     def test_get_evaluation_llm(self, full_config_data, monkeypatch):
         """get_evaluation_llm returns LLM for evaluation_llm config key"""
         monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
         mock_cls = MagicMock()
 
-        with patch("src.model.llm_factory.settings") as ms, \
-             patch("langchain_openai.ChatOpenAI", mock_cls):
+        with (
+            patch("src.model.llm_factory.settings") as ms,
+            patch("langchain_openai.ChatOpenAI", mock_cls),
+        ):
             ms.config = full_config_data
             from src.model.llm_factory import get_evaluation_llm
+
             get_evaluation_llm(config=full_config_data)
 
         mock_cls.assert_called_once()
@@ -185,10 +224,13 @@ class TestHelperFunctions:
         monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
         mock_cls = MagicMock()
 
-        with patch("src.model.llm_factory.settings") as ms, \
-             patch("langchain_groq.ChatGroq", mock_cls):
+        with (
+            patch("src.model.llm_factory.settings") as ms,
+            patch("langchain_groq.ChatGroq", mock_cls),
+        ):
             ms.config = full_config_data
             from src.model.llm_factory import get_generation_llm
+
             get_generation_llm(config=full_config_data)
 
         mock_cls.assert_called_once()

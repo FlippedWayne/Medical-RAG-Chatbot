@@ -17,18 +17,21 @@ from .toxic_detector import ToxicContentDetector
 # Optional ML-based detectors (may not be available)
 try:
     from .pii_detector_presidio import PIIDetectorPresidio
+
     PRESIDIO_AVAILABLE = True
 except ImportError:
     PRESIDIO_AVAILABLE = False
 
 try:
     from .toxic_detector_ml import ToxicContentDetectorML
+
     DETOXIFY_AVAILABLE = True
 except ImportError:
     DETOXIFY_AVAILABLE = False
 
 try:
     from .ner_detector import NERDetector
+
     NER_AVAILABLE = True
 except ImportError:
     NER_AVAILABLE = False
@@ -36,18 +39,15 @@ except ImportError:
 __all__ = [
     # Main validator
     "ContentValidator",
-    
     # Configuration
     "ValidationConfig",
     "ValidationIssue",
     "ValidationSeverity",
     "PIIDetectionMode",
     "ToxicDetectionMode",
-    
     # Detectors
     "PIIDetector",
     "ToxicContentDetector",
-    
     # Availability flags
     "PRESIDIO_AVAILABLE",
     "DETOXIFY_AVAILABLE",

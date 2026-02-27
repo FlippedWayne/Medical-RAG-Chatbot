@@ -41,4 +41,27 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
+    "ruff>=0.9.0",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E402",  # Module level import not at top — intentional in scripts & test helpers
+    "E501",  # Line too long — pre-existing style in codebase
+    "W293",  # Blank line contains whitespace — handled by formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]          # Re-exports are intentional in __init__ files
+"tests/giskard/*.py" = ["F401"]      # Optional giskard imports
+"tests/promptfoo/*.py" = ["F401"]
+"tests/integration/test_observability.py" = ["F401"]          # Optional observability imports
+"src/content_analyzer/ner_detector.py" = ["F401"]             # Optional spacy type import
+"src/content_analyzer/pii_detector_presidio.py" = ["F401"]    # Optional presidio import
+
+

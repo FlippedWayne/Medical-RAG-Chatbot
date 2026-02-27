@@ -24,17 +24,18 @@ print(f"Issues: {len(issues)}")
 # EXAMPLE 2: Validate User Query in RAG
 # ============================================================================
 
+
 def validate_user_query(query: str) -> bool:
     """Validate user query before processing"""
     validator = ContentValidator()
     is_safe, issues = validator.validate(query)
-    
+
     if not is_safe:
         print(f"❌ Query blocked: {len(issues)} issue(s) found")
         for issue in issues:
             print(f"  - {issue}")
         return False
-    
+
     return True
 
 
@@ -48,22 +49,24 @@ if validate_user_query(user_query):
 # EXAMPLE 3: Validate Retrieved Documents
 # ============================================================================
 
+
 def filter_safe_documents(documents: list) -> list:
     """Filter out documents with PII or toxic content"""
     validator = ContentValidator()
     safe_docs = []
-    
+
     for doc in documents:
         # Assuming doc has .page_content attribute (LangChain Document)
-        content = doc.page_content if hasattr(doc, 'page_content') else str(doc)
-        
+        content = doc.page_content if hasattr(doc, "page_content") else str(doc)
+
         is_safe, issues = validator.validate(content)
         if is_safe:
             safe_docs.append(doc)
         else:
             print(f"⚠️  Blocked document with {len(issues)} issue(s)")
-    
+
     return safe_docs
+
 
 # Usage
 # retrieved_docs = vectorstore.similarity_search(query, k=5)
@@ -75,17 +78,14 @@ def filter_safe_documents(documents: list) -> list:
 # EXAMPLE 4: Sanitize Content (Redact PII)
 # ============================================================================
 
+
 def sanitize_medical_record(text: str) -> str:
     """Sanitize medical record by redacting PII"""
     validator = ContentValidator()
-    
+
     # Redact PII and filter toxic content
-    sanitized = validator.sanitize_content(
-        text,
-        redact_pii=True,
-        filter_toxic=True
-    )
-    
+    sanitized = validator.sanitize_content(text, redact_pii=True, filter_toxic=True)
+
     return sanitized
 
 
@@ -113,11 +113,11 @@ strict_config = ValidationConfig(
     enable_pii_detection=True,
     enable_toxic_detection=True,
     pii_block_on_critical=True,
-    pii_block_on_high=True,      # Block emails and phones too
+    pii_block_on_high=True,  # Block emails and phones too
     toxic_block_on_critical=True,
-    toxic_block_on_high=True,    # Block all toxic content
+    toxic_block_on_high=True,  # Block all toxic content
     log_issues=True,
-    verbose=True
+    verbose=True,
 )
 
 strict_validator = ContentValidator(strict_config)
@@ -132,22 +132,23 @@ print(f"Strict mode - Safe: {is_safe}")  # Will be False
 # EXAMPLE 6: Get Validation Summary
 # ============================================================================
 
+
 def analyze_content(text: str):
     """Analyze content and get detailed summary"""
     validator = ContentValidator()
     is_safe, issues = validator.validate(text)
-    
+
     if issues:
         summary = validator.get_validation_summary(issues)
-        
+
         print(f"Total Issues: {summary['total_issues']}")
         print(f"PII Issues: {summary['pii_count']}")
         print(f"Toxic Issues: {summary['toxic_count']}")
-        print(f"\nBy Severity:")
-        for severity, count in summary['by_severity'].items():
+        print("\nBy Severity:")
+        for severity, count in summary["by_severity"].items():
             if count > 0:
                 print(f"  {severity}: {count}")
-    
+
     return is_safe
 
 
@@ -195,28 +196,25 @@ def process_user_query(query: str):
 # EXAMPLE 8: Batch Processing
 # ============================================================================
 
+
 def validate_multiple_texts(texts: list) -> dict:
     """Validate multiple texts and return summary"""
     validator = ContentValidator()
-    
+
     results = validator.validate_batch(texts)
-    
+
     summary = {
-        'total': len(texts),
-        'safe': sum(1 for is_safe, _ in results if is_safe),
-        'blocked': sum(1 for is_safe, _ in results if not is_safe),
-        'total_issues': sum(len(issues) for _, issues in results)
+        "total": len(texts),
+        "safe": sum(1 for is_safe, _ in results if is_safe),
+        "blocked": sum(1 for is_safe, _ in results if not is_safe),
+        "total_issues": sum(len(issues) for _, issues in results),
     }
-    
+
     return summary
 
 
 # Usage
-texts = [
-    "Clean medical text",
-    "Contains email@test.com",
-    "Has SSN: 123-45-6789"
-]
+texts = ["Clean medical text", "Contains email@test.com", "Has SSN: 123-45-6789"]
 
 summary = validate_multiple_texts(texts)
 print(f"Validated {summary['total']} texts")
@@ -234,8 +232,8 @@ detector = PIIDetector()
 text = "Contact: john@email.com, Phone: 555-1234"
 
 # Check for specific PII type
-email_issues = detector.detect_by_type(text, 'email')
-phone_issues = detector.detect_by_type(text, 'phone')
+email_issues = detector.detect_by_type(text, "email")
+phone_issues = detector.detect_by_type(text, "phone")
 
 print(f"Found {len(email_issues)} email(s)")
 print(f"Found {len(phone_issues)} phone number(s)")
