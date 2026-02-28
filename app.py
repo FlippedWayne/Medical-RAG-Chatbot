@@ -1,6 +1,7 @@
 import os
 from typing import Optional, Any
 from datetime import datetime
+from pathlib import Path
 import streamlit as st
 
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -200,7 +201,6 @@ def get_rag_prompt():
         logger.info("Loading RAG prompt template from file...")
 
         from langchain_core.prompts import ChatPromptTemplate
-        from pathlib import Path
 
         # Load prompt from file
         prompt_path = Path("src/prompts/medical_assistant.txt")
