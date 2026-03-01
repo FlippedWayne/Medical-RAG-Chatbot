@@ -29,14 +29,25 @@ RUN uv sync --frozen --no-dev
 # Copy application code
 COPY . /app/
 
+# Copy Streamlit config (critical for WebSocket support on Cloud Run)
+COPY .streamlit /app/.streamlit
+
 # Expose the port Streamlit uses on Cloud Run
 EXPOSE 8080
 
-# Configure Streamlit to run on the correct port and host
+# Configure Streamlit via ENV (belt-and-suspenders alongside config.toml)
 ENV STREAMLIT_SERVER_PORT=8080
 ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
 ENV STREAMLIT_SERVER_HEADLESS=true
 ENV STREAMLIT_SERVER_ENABLE_CORS=false
+ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+ENV STREAMLIT_SERVER_ENABLE_WEBSOCKET_COMPRESSION=false
 
 # Run the application
-CMD ["uv", "run", "streamlit", "run", "app.py"]
+CMD ["uv", "run", "streamlit", "run", "app.py", \
+     "--server.port=8080", \
+     "--server.address=0.0.0.0", \
+     "--server.headless=true", \
+     "--server.enableCORS=false", \
+     "--server.enableXsrfProtection=false", \
+     "--server.enableWebsocketCompression=false"]

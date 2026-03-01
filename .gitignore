@@ -51,8 +51,9 @@ data/*.pdf
 .DS_Store
 Thumbs.db
 
-# Streamlit
-.streamlit/
+# Streamlit secrets (never commit secrets, but config.toml is safe to track)
+# .streamlit/   ← intentionally NOT ignored so config.toml is deployed to Cloud Run
+
 
 # Jupyter Notebook
 .ipynb_checkpoints
