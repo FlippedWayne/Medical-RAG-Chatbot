@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 # Helper: create a mock GCS blob
 # ---------------------------------------------------------------------------
 
+
 def _make_blob(name: str, exists: bool = True, size: int = 1024):
     blob = MagicMock()
     blob.name = name

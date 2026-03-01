@@ -88,15 +88,21 @@ class GCSHandler:
             # Catch DefaultCredentialsError and any other auth/connection errors.
             # Disable GCS gracefully so local dev still works without gcloud login.
             err_str = str(e)
-            if "credentials" in err_str.lower() or "default" in err_str.lower() or "auth" in err_str.lower():
+            if (
+                "credentials" in err_str.lower()
+                or "default" in err_str.lower()
+                or "auth" in err_str.lower()
+            ):
                 logger.warning(
                     f"GCS credentials not found — disabling GCS for this session. "
                     f"Run 'gcloud auth application-default login' to enable GCS locally. "
                     f"({err_str})"
                 )
-                self.bucket_name = ""   # disables gcs_enabled for all subsequent calls
+                self.bucket_name = ""  # disables gcs_enabled for all subsequent calls
                 return None
-            raise RuntimeError(f"Failed to connect to GCS bucket '{self.bucket_name}': {e}") from e
+            raise RuntimeError(
+                f"Failed to connect to GCS bucket '{self.bucket_name}': {e}"
+            ) from e
 
     def _blob_name(self, filename: str) -> str:
         """Return the full GCS object path for a given filename."""
