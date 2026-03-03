@@ -538,19 +538,27 @@ def rebuild_vectorstore_from_pdfs(pdf_files: list, mode: str = "add") -> tuple:
                 f"indexed chunks {i + 1}–{min(i + BATCH_SIZE, len(all_chunks))}"
             )
 
-        # Save to local disk path (so GCS upload can read the files)
-        os.makedirs(DB_FAISS_PATH, exist_ok=True)
-        final_db.save_local(DB_FAISS_PATH)
-        logger.info(f"Saved updated FAISS index to {DB_FAISS_PATH}")
+        # Save to a temp directory and upload to GCS.
+        # Cloud Run's /app directory may be read-only, so we always save to
+        # a temp dir first, then upload from there.
+        import tempfile as _tf
 
-        # Upload to GCS (if configured)
         gcs_ok = False
-        if gcs_handler.gcs_enabled:
-            gcs_ok = gcs_handler.upload_faiss_index(DB_FAISS_PATH)
-            if gcs_ok:
-                logger.info("Uploaded updated FAISS index to GCS")
-            else:
-                logger.warning("GCS upload failed — index saved locally only")
+        save_dir = _tf.mkdtemp(prefix="faiss_upload_")
+        try:
+            final_db.save_local(save_dir)
+            logger.info(f"Saved FAISS index to temp dir: {save_dir}")
+
+            if gcs_handler.gcs_enabled:
+                gcs_ok = gcs_handler.upload_faiss_index(save_dir)
+                if gcs_ok:
+                    logger.info("✅ Uploaded updated FAISS index to GCS")
+                else:
+                    logger.warning("GCS upload returned False — check logs above")
+        except Exception as save_err:
+            logger.error(
+                f"Failed to save/upload FAISS index: {save_err}", exc_info=True
+            )
 
         # Update session state so queries immediately use the new index
         st.session_state.vectorstore = final_db
