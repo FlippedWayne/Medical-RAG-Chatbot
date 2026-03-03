@@ -116,7 +116,9 @@ def get_vectorstore() -> Optional[FAISS]:
                     logger.info("✅ FAISS index loaded from GCS")
                     return db
                 except Exception as e:
-                    logger.warning(f"GCS index found but failed to load: {e}. Trying local fallback.")
+                    logger.warning(
+                        f"GCS index found but failed to load: {e}. Trying local fallback."
+                    )
             else:
                 logger.info("GCS index not found yet — checking local fallback")
 
@@ -464,9 +466,7 @@ def display_error_message(error: Exception, error_type: str):
     logger.error(f"{error_type}: {str(error)}", exc_info=True)
 
 
-def rebuild_vectorstore_from_pdfs(
-    uploaded_files, mode: str = "add"
-) -> tuple:
+def rebuild_vectorstore_from_pdfs(uploaded_files, mode: str = "add") -> tuple:
     """
     Build or update the FAISS index from uploaded PDF files.
 
@@ -483,19 +483,19 @@ def rebuild_vectorstore_from_pdfs(
         return False, "No files uploaded."
 
     try:
-        # Save uploaded files to a temp directory
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            all_chunks = []
-            splitter = RecursiveCharacterTextSplitter(
-                chunk_size=500, chunk_overlap=50
-            )
+        # Load embedding model upfront — needed by both merge and rebuild paths
+        embedding_model = HuggingFaceEmbeddings(model_name=DEFAULT_EMBEDDING_MODEL)
 
+        # Save uploaded files to a temp directory and extract chunks
+        all_chunks = []
+        splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
             for uploaded_file in uploaded_files:
                 tmp_file_path = os.path.join(tmp_dir, uploaded_file.name)
                 with open(tmp_file_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
 
-                # Load and split the PDF
                 try:
                     loader = PyPDFLoader(tmp_file_path)
                     docs = loader.load()
@@ -509,34 +509,34 @@ def rebuild_vectorstore_from_pdfs(
                     logger.warning(f"Failed to load '{uploaded_file.name}': {e}")
                     return False, f"Failed to read '{uploaded_file.name}': {e}"
 
-            if not all_chunks:
-                return False, "No content could be extracted from the uploaded PDFs."
+        if not all_chunks:
+            return False, "No content could be extracted from the uploaded PDFs."
 
-            # Load embedding model
-            embedding_model = HuggingFaceEmbeddings(
-                model_name=DEFAULT_EMBEDDING_MODEL
-            )
-
-            if mode == "add" and os.path.exists(DB_FAISS_PATH):
-                # Merge with existing index
-                existing_db = FAISS.load_local(
-                    DB_FAISS_PATH,
-                    embedding_model,
-                    allow_dangerous_deserialization=True,
-                )
+        # Build or merge the index
+        if mode == "add":
+            # Use the already-loaded vectorstore from session state (works on Cloud Run
+            # where the index was downloaded to a temp dir, not DB_FAISS_PATH)
+            existing_db = st.session_state.get("vectorstore")
+            if existing_db is not None:
                 new_db = FAISS.from_documents(all_chunks, embedding_model)
                 existing_db.merge_from(new_db)
                 final_db = existing_db
-                logger.info("Merged new documents into existing FAISS index")
+                logger.info("Merged new documents into in-memory FAISS index")
             else:
-                # Build fresh index
+                # No existing index in session — build fresh
                 final_db = FAISS.from_documents(all_chunks, embedding_model)
-                logger.info("Built new FAISS index from scratch")
+                logger.info(
+                    "No existing index in session — built new FAISS index from scratch"
+                )
+        else:
+            # Rebuild from scratch
+            final_db = FAISS.from_documents(all_chunks, embedding_model)
+            logger.info("Built new FAISS index from scratch")
 
-            # Save to local disk
-            os.makedirs(DB_FAISS_PATH, exist_ok=True)
-            final_db.save_local(DB_FAISS_PATH)
-            logger.info(f"Saved updated FAISS index to {DB_FAISS_PATH}")
+        # Save to local disk path (so GCS upload can read the files)
+        os.makedirs(DB_FAISS_PATH, exist_ok=True)
+        final_db.save_local(DB_FAISS_PATH)
+        logger.info(f"Saved updated FAISS index to {DB_FAISS_PATH}")
 
         # Upload to GCS (if configured)
         gcs_ok = False
@@ -547,7 +547,9 @@ def rebuild_vectorstore_from_pdfs(
             else:
                 logger.warning("GCS upload failed — index saved locally only")
 
-        # Clear Streamlit resource cache so next query loads the new index
+        # Update session state so queries immediately use the new index
+        st.session_state.vectorstore = final_db
+        # Also clear the cache so a fresh page load re-downloads from GCS
         get_vectorstore.clear()
 
         n_files = len(uploaded_files)
