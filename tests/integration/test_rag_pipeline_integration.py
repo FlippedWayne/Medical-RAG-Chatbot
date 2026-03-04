@@ -2,7 +2,7 @@
 Integration tests: End-to-end RAG pipeline
 
 Tests the full query flow from app.py using mocked external dependencies:
-  validate_environment → get_rag_prompt → process_query → OutputGuardrails
+  validate_environment → get_rag_prompt → prepare_rag_context → validate_response
 
 No real API calls are made: the LLM and FAISS vectorstore are both mocked.
 """
@@ -166,170 +166,136 @@ class TestGetRagPromptIntegration:
 
 
 # ---------------------------------------------------------------------------
-# Tests: process_query
+# Tests: prepare_rag_context / validate_response (was: process_query)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
-class TestProcessQueryIntegration:
-    """process_query() wires vectorstore + LLM + guardrails correctly."""
+class TestPrepareRagContextIntegration:
+    """prepare_rag_context() retrieves docs and builds the prompt correctly."""
 
     def _get_prompt(self):
         import app as app_module
 
         return app_module.get_rag_prompt()
 
-    def test_process_query_returns_string(self, mock_llm, mock_vectorstore):
-        """A well-formed query returns a non-empty answer string."""
+    def test_returns_tuple(self, mock_vectorstore):
+        """A well-formed query returns (formatted_prompt, retrieved_docs)."""
         import app as app_module
 
-        passthrough_guardrails = _make_guardrails_passthrough()
         prompt = self._get_prompt()
 
-        with patch("app.guardrails", passthrough_guardrails):
-            with patch("app.is_langsmith_enabled", return_value=False):
-                answer = app_module.process_query(
-                    "What is diabetes?",
-                    mock_vectorstore,
-                    mock_llm,
-                    prompt,
-                )
+        with patch("app.is_langsmith_enabled", return_value=False):
+            result = app_module.prepare_rag_context(
+                "What is diabetes?",
+                mock_vectorstore,
+                prompt,
+            )
 
-        assert isinstance(answer, str)
-        assert len(answer) > 0
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        formatted_prompt, docs = result
+        assert isinstance(formatted_prompt, str)
+        assert len(formatted_prompt) > 0
+        assert len(docs) > 0
 
-    def test_process_query_calls_vectorstore_retriever(
-        self, mock_llm, mock_vectorstore
-    ):
+    def test_calls_vectorstore_retriever(self, mock_vectorstore):
         """Retriever is invoked once per query."""
         import app as app_module
 
-        passthrough_guardrails = _make_guardrails_passthrough()
         prompt = self._get_prompt()
 
-        with patch("app.guardrails", passthrough_guardrails):
-            with patch("app.is_langsmith_enabled", return_value=False):
-                app_module.process_query(
-                    "What is hypertension?",
-                    mock_vectorstore,
-                    mock_llm,
-                    prompt,
-                )
+        with patch("app.is_langsmith_enabled", return_value=False):
+            app_module.prepare_rag_context(
+                "What is hypertension?",
+                mock_vectorstore,
+                prompt,
+            )
 
         mock_vectorstore.as_retriever.assert_called_once()
 
-    def test_process_query_calls_llm_invoke(self, mock_llm, mock_vectorstore):
-        """LLM.invoke() is called exactly once per query."""
-        import app as app_module
-
-        passthrough_guardrails = _make_guardrails_passthrough()
-        prompt = self._get_prompt()
-
-        with patch("app.guardrails", passthrough_guardrails):
-            with patch("app.is_langsmith_enabled", return_value=False):
-                app_module.process_query(
-                    "Explain insulin resistance.",
-                    mock_vectorstore,
-                    mock_llm,
-                    prompt,
-                )
-
-        mock_llm.invoke.assert_called_once()
-
-    def test_process_query_empty_query_raises(self, mock_llm, mock_vectorstore):
+    def test_empty_query_raises(self, mock_vectorstore):
         """Empty query raises LLMError."""
         from src.utils.exceptions import LLMError
         import app as app_module
 
-        passthrough_guardrails = _make_guardrails_passthrough()
         prompt = self._get_prompt()
 
-        with patch("app.guardrails", passthrough_guardrails):
-            with patch("app.is_langsmith_enabled", return_value=False):
-                with pytest.raises(LLMError):
-                    app_module.process_query(
-                        "",
-                        mock_vectorstore,
-                        mock_llm,
-                        prompt,
-                    )
+        with patch("app.is_langsmith_enabled", return_value=False):
+            with pytest.raises(LLMError):
+                app_module.prepare_rag_context(
+                    "",
+                    mock_vectorstore,
+                    prompt,
+                )
 
-    def test_process_query_whitespace_only_raises(self, mock_llm, mock_vectorstore):
+    def test_whitespace_only_raises(self, mock_vectorstore):
         """Whitespace-only query raises LLMError."""
         from src.utils.exceptions import LLMError
         import app as app_module
 
-        passthrough_guardrails = _make_guardrails_passthrough()
         prompt = self._get_prompt()
 
-        with patch("app.guardrails", passthrough_guardrails):
-            with patch("app.is_langsmith_enabled", return_value=False):
-                with pytest.raises(LLMError):
-                    app_module.process_query(
-                        "   ",
-                        mock_vectorstore,
-                        mock_llm,
-                        prompt,
-                    )
+        with patch("app.is_langsmith_enabled", return_value=False):
+            with pytest.raises(LLMError):
+                app_module.prepare_rag_context(
+                    "   ",
+                    mock_vectorstore,
+                    prompt,
+                )
 
-    def test_process_query_validates_output_via_guardrails(
-        self, mock_llm, mock_vectorstore
-    ):
-        """guardrails.validate_output is called once per query."""
+
+@pytest.mark.integration
+class TestValidateResponseIntegration:
+    """validate_response() runs guardrails on the complete LLM output."""
+
+    def test_validates_output_via_guardrails(self):
+        """guardrails.validate_output is called once per validation."""
         import app as app_module
 
         passthrough_guardrails = _make_guardrails_passthrough()
-        prompt = self._get_prompt()
 
         with patch("app.guardrails", passthrough_guardrails):
             with patch("app.is_langsmith_enabled", return_value=False):
-                app_module.process_query(
+                app_module.validate_response(
+                    "Some medical answer about cholesterol.",
                     "What is cholesterol?",
-                    mock_vectorstore,
-                    mock_llm,
-                    prompt,
+                    [],
                 )
 
         passthrough_guardrails.validate_output.assert_called_once()
 
-    def test_process_query_unsafe_output_returns_fallback(
-        self, mock_llm_pii_response, mock_vectorstore
-    ):
-        """When guardrails block the LLM response, a fallback message is returned."""
+    def test_unsafe_output_returns_fallback(self):
+        """When guardrails block, returns (False, fallback)."""
         import app as app_module
 
         blocking_guardrails = _make_guardrails_blocking()
-        prompt = self._get_prompt()
 
         with patch("app.guardrails", blocking_guardrails):
             with patch("app.is_langsmith_enabled", return_value=False):
-                answer = app_module.process_query(
+                is_safe, answer = app_module.validate_response(
+                    "Patient SSN: 123-45-6789 needs treatment.",
                     "Tell me about the patient.",
-                    mock_vectorstore,
-                    mock_llm_pii_response,
-                    prompt,
+                    [],
                 )
 
+        assert is_safe is False
         assert "sorry" in answer.lower() or "cannot" in answer.lower()
 
-    def test_process_query_clean_output_is_returned_unchanged(
-        self, mock_llm, mock_vectorstore
-    ):
+    def test_clean_output_is_returned_unchanged(self):
         """Safe LLM output is returned as-is (no modification by guardrails)."""
         import app as app_module
 
         passthrough_guardrails = _make_guardrails_passthrough()
-        prompt = self._get_prompt()
+        test_answer = "Diabetes is a chronic metabolic disease."
 
         with patch("app.guardrails", passthrough_guardrails):
             with patch("app.is_langsmith_enabled", return_value=False):
-                answer = app_module.process_query(
+                is_safe, answer = app_module.validate_response(
+                    test_answer,
                     "What is diabetes?",
-                    mock_vectorstore,
-                    mock_llm,
-                    prompt,
+                    [],
                 )
 
-        # The mock LLM response should be returned unchanged
-        expected = mock_llm.invoke.return_value.content
-        assert answer == expected
+        assert is_safe is True
+        assert answer == test_answer
