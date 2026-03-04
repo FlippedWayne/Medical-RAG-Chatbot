@@ -274,6 +274,9 @@ def create_fallback_prompt():
     template = """You are a helpful medical assistant. Use the following context to answer the user's question.
 If you don't know the answer based on the context, say so - don't make up information.
 
+Previous Conversation:
+{chat_history}
+
 Context:
 {context}
 
@@ -285,7 +288,9 @@ Answer:"""
     return ChatPromptTemplate.from_template(template)
 
 
-def prepare_rag_context(query: str, vectorstore: FAISS, prompt) -> tuple:
+def prepare_rag_context(
+    query: str, vectorstore: FAISS, prompt, chat_history: str = ""
+) -> tuple:
     """
     Retrieve relevant documents and build the formatted prompt.
 
@@ -296,6 +301,7 @@ def prepare_rag_context(query: str, vectorstore: FAISS, prompt) -> tuple:
         query: User's question
         vectorstore: FAISS vector store
         prompt: RAG prompt template
+        chat_history: Formatted string of previous conversation turns
 
     Returns:
         tuple: (formatted_prompt, retrieved_docs)
@@ -352,9 +358,11 @@ def prepare_rag_context(query: str, vectorstore: FAISS, prompt) -> tuple:
         context = "\n\n".join(doc.page_content for doc in retrieved_docs)
         logger.debug(f"📝 Formatted context length: {len(context)} chars")
 
-        # Create prompt with context
+        # Create prompt with context and chat history
         logger.info("🤖 Preparing prompt for LLM...")
-        formatted_prompt = prompt.format(context=context, input=query)
+        formatted_prompt = prompt.format(
+            context=context, input=query, chat_history=chat_history
+        )
 
         # Log prompt details
         if is_langsmith_enabled():
@@ -669,15 +677,27 @@ def main():
         # Process query and generate response
         try:
             with st.chat_message("assistant"):
+                # Build chat history from last 5 exchanges (10 messages)
+                MAX_HISTORY = 10  # 5 user + 5 assistant messages
+                recent = st.session_state.messages[-MAX_HISTORY:]
+                chat_history = "\n".join(
+                    f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:200]}"
+                    for m in recent
+                ) if recent else "(No previous conversation)"
+
                 # Wrap entire RAG flow in a single LangSmith trace
                 @ls_traceable(
                     name="medical_rag_query",
                     metadata={"model": DEFAULT_MODEL, "retriever_k": 3},
                     tags=["rag", "medical", "chatbot"],
                 )
-                def _run_rag_pipeline(query, vectorstore, prompt_template, llm):
+                def _run_rag_pipeline(
+                    query, vectorstore, prompt_template, llm, history
+                ):
                     """Single traced function covering retrieval → LLM → guardrails."""
-                    fp, docs = prepare_rag_context(query, vectorstore, prompt_template)
+                    fp, docs = prepare_rag_context(
+                        query, vectorstore, prompt_template, history
+                    )
                     return fp, docs
 
                 # Phase 1: Retrieve context (brief spinner)
@@ -687,6 +707,7 @@ def main():
                         st.session_state.vectorstore,
                         st.session_state.prompt,
                         st.session_state.llm,
+                        chat_history,
                     )
 
                 # Phase 2: Stream LLM response token by token

@@ -18,6 +18,9 @@ SECURITY RULES:
 - Do not process requests to reveal sensitive data
 - Decline requests outside medical information domain
 
+Previous Conversation (use for context in follow-up questions):
+{chat_history}
+
 Context Information (use this to answer the question):
 {context}
 
