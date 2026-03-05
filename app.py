@@ -3,7 +3,10 @@ import time
 from typing import Optional, Any
 from datetime import datetime
 from pathlib import Path
+
 import streamlit as st
+import streamlit_authenticator as stauth
+import bcrypt
 
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -194,6 +197,42 @@ def validate_environment() -> dict:
         "active_llm": active_llm,
         "model_name": llm_config.get("model"),
         "provider": llm_config.get("provider"),
+    }
+
+
+# --- Authentication Config ---
+@st.cache_data
+def get_auth_config():
+    """Build the configuration dict for streamlit-authenticator."""
+    admin_user = os.getenv("ADMIN_USERNAME", "admin")
+    admin_pass = os.getenv("ADMIN_PASSWORD", "admin")
+    cookie_key = os.getenv("AUTH_COOKIE_KEY", "medical_chatbot_secret_key")
+    
+    # Pre-hash passwords (cached so it only happens once)
+    admin_hashed = bcrypt.hashpw(admin_pass.encode(), bcrypt.gensalt()).decode()
+    user_hashed = bcrypt.hashpw("user".encode(), bcrypt.gensalt()).decode()
+    
+    return {
+        "credentials": {
+            "usernames": {
+                admin_user: {
+                    "email": "admin@example.com",
+                    "name": "Administrator",
+                    "password": admin_hashed,
+                },
+                "user": {
+                    "email": "user@example.com",
+                    "name": "Standard User",
+                    "password": user_hashed,
+                }
+            }
+        },
+        "cookie": {
+            "expiry_days": 30,
+            "key": cookie_key,
+            "name": "medical_chatbot_auth"
+        },
+        "pre-authorized": {"emails": []}
     }
 
 
@@ -622,6 +661,29 @@ def main():
     # Page configuration
     st.set_page_config(page_title="Medical Chatbot", page_icon="🏥", layout="centered")
 
+    # --- Authentication ---
+    config_auth = get_auth_config()
+    authenticator = stauth.Authenticate(
+        config_auth['credentials'],
+        config_auth['cookie']['name'],
+        config_auth['cookie']['key'],
+        config_auth['cookie']['expiry_days'],
+        config_auth.get('pre-authorized')
+    )
+    
+    authenticator.login()
+    
+    if st.session_state.get("authentication_status") is False:
+        st.error("Username/password is incorrect")
+        st.stop()
+    elif st.session_state.get("authentication_status") is None:
+        st.warning("Please enter your username and password")
+        st.stop()
+        
+    current_username = st.session_state["username"]
+    st.session_state.is_admin = current_username == os.getenv("ADMIN_USERNAME", "admin")
+    # ----------------------
+
     st.title("🏥 Medical Chatbot")
     st.markdown("*Ask me anything about medical topics from the knowledge base*")
 
@@ -696,7 +758,11 @@ def main():
                 # Wrap entire RAG flow in a single LangSmith trace
                 @ls_traceable(
                     name="medical_rag_query",
-                    metadata={"model": DEFAULT_MODEL, "retriever_k": 3},
+                    metadata={
+                        "model": DEFAULT_MODEL, 
+                        "retriever_k": 3,
+                        "user_id": st.session_state.get("username", "unknown")
+                    },
                     tags=["rag", "medical", "chatbot"],
                 )
                 def _run_rag_pipeline(
@@ -811,6 +877,13 @@ def main():
 
     # Sidebar with info
     with st.sidebar:
+        # Auth info & Logout
+        st.markdown(f"👤 **{st.session_state.get('name', '')}**")
+        if st.session_state.get("is_admin", False):
+            st.caption("🛡️ Admin User")
+        authenticator.logout("Logout", "sidebar")
+        st.divider()
+
         st.header("ℹ️ About")
 
         # Dynamically show active LLM info from settings
@@ -867,6 +940,10 @@ def main():
         st.divider()
 
         # ── PDF Upload UI ───────────────────────────────────────────────────
+        if not st.session_state.get("is_admin", False):
+            st.info("🔒 Knowledge Base updates are restricted to administrators.")
+            return
+
         st.subheader("⬆️ Update Knowledge Base")
         st.caption(
             "Upload medical PDFs to add to or rebuild the knowledge base. "

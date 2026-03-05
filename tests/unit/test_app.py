@@ -16,6 +16,10 @@ streamlit_mock = MagicMock()
 streamlit_mock.cache_resource = lambda func: func  # passthrough decorator
 sys.modules.setdefault("streamlit", streamlit_mock)
 
+# Also mock streamlit_authenticator which depends on streamlit internals
+stauth_mock = MagicMock()
+sys.modules.setdefault("streamlit_authenticator", stauth_mock)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
